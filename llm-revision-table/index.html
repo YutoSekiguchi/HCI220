@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="元コード、LLMの判断、修正の有無を8分類で整理した2024〜2026年の集計表。">
+  <title>元コード・LLMの判断と修正状況｜年度別集計</title>
+  <style>
+    :root {
+      --page: #f3f5f7;
+      --paper: #ffffff;
+      --ink: #1d2b3c;
+      --muted: #647185;
+      --line: #e6eaf0;
+      --blue: #2454a4;
+      --blue-soft: #eff4fc;
+      --green: #27634f;
+      --green-soft: #edf6f1;
+      --red: #96524a;
+      --red-soft: #fbf0ed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    main { max-width: 1160px; margin: 0 auto; padding: 64px 44px 40px; }
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 0 0 28px; }
+    .eyebrow { display: flex; align-items: center; gap: 10px; margin: 0 0 13px; color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .18em; }
+    .eyebrow::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: var(--blue); }
+    h1 { margin: 0; font-size: clamp(22px, 2.5vw, 31px); line-height: 1.5; font-weight: 700; letter-spacing: .025em; }
+    h1 span { display: inline-block; }
+    .description { margin: 10px 0 0; font-size: 13px; line-height: 1.8; color: var(--muted); }
+    .print-button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      flex-shrink: 0; min-height: 40px; padding: 9px 14px;
+      background: var(--paper); color: #42516a; border: 1px solid #d9e0e9; border-radius: 8px;
+      font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .print-button:hover { background: #eaf0f8; border-color: #b6c6df; }
+    .print-button:focus-visible, .table-scroll:focus-visible { outline: 3px solid #6995d9; outline-offset: 4px; }
+    .print-button svg { width: 15px; height: 15px; }
+    .report { overflow: hidden; border: 1px solid #e0e5ec; border-radius: 16px; background: var(--paper); box-shadow: 0 8px 30px #1b2d4310; }
+    .table-topline { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+    .table-label { font-size: 13px; font-weight: 700; }
+    .table-unit { font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+    .table-scroll { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+    table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+    col.classification { width: 7%; }
+    col.original { width: 13%; }
+    col.judgment { width: 14%; }
+    col.revision { width: 10%; }
+    col.year { width: 14%; }
+    th, td { padding: 22px 14px; vertical-align: middle; }
+    thead th { padding-top: 20px; padding-bottom: 20px; background: #f8f9fb; color: #516075; font-size: 12px; font-weight: 600; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    thead .year-heading { font-size: 14px; letter-spacing: .025em; }
+    tbody th { font-weight: 500; text-align: center; }
+    tbody td { text-align: center; }
+    tbody tr + tr > * { border-top: 1px solid #edf0f4; }
+    tbody + tbody tr:first-child > * { border-top: 2px solid #e0e6ee; }
+    .row-number { color: #758196; font-size: 17px; }
+    .condition { background: #fcfcfd; }
+    .status { display: inline-block; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; line-height: 1.25; }
+    .correct { color: var(--green); background: var(--green-soft); }
+    .incorrect { color: var(--red); background: var(--red-soft); }
+    .revision-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+    .revision-label::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #b8c1cc; }
+    .revised .revision-label { color: var(--blue); font-weight: 600; }
+    .revised .revision-label::before { background: #4d7cc4; }
+    .unchanged .revision-label { color: #788497; }
+    .number-cell { font-family: "Helvetica Neue", Arial, -apple-system, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .percentage { display: inline-block; min-width: 6ch; text-align: right; font-size: 18px; font-weight: 600; color: var(--ink); letter-spacing: -.025em; }
+    .total-column { background: var(--blue-soft); border-left: 1px solid #e0e8f5; }
+    thead .total-column { color: var(--blue); background: #e9f0fc; }
+    .total-column .percentage { color: #244878; font-weight: 700; }
+    .footnotes { padding: 22px 27px 24px; background: #fff; }
+    .footnotes p { margin: 0; font-size: 11px; line-height: 1.9; color: var(--muted); }
+    .footnotes p + p { margin-top: 3px; }
+    .note-mark { display: inline-block; width: 16px; color: #8792a3; }
+    .page-footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 17px; color: #778396; font-size: 10px; letter-spacing: .025em; }
+    .mobile-hint { display: none; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 700px) {
+      main { padding: 30px 16px 24px; }
+      .page-header { display: block; margin-bottom: 20px; }
+      .eyebrow { margin-bottom: 10px; font-size: 10px; }
+      h1 { font-size: 23px; line-height: 1.55; }
+      .description { max-width: 30em; font-size: 12px; }
+      .print-button { margin-top: 16px; }
+      .report { border-radius: 12px; }
+      .table-topline { padding: 18px 18px; }
+      .table-label { font-size: 12px; }
+      .table-unit { font-size: 10px; }
+      th, td { padding-top: 20px; padding-bottom: 20px; }
+      .footnotes { padding: 18px; }
+      .mobile-hint { display: block; margin: 12px 0 0; font-size: 11px; color: var(--muted); }
+      .page-footer { font-size: 9px; }
+    }
+    @page { size: A4 landscape; margin: 12mm; }
+    @media print {
+      body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      main { max-width: none; padding: 0; }
+      .page-header { margin-bottom: 18px; }
+      h1 { font-size: 25px; }
+      .description { margin-top: 6px; font-size: 11px; }
+      .eyebrow { margin-bottom: 9px; }
+      .print-button, .mobile-hint, .page-footer { display: none; }
+      .report { box-shadow: none; border-radius: 10px; break-inside: avoid; }
+      .table-topline { padding: 15px 20px; }
+      .table-scroll { overflow: visible; }
+      table { min-width: 0; }
+      th, td { padding: 9px 10px; }
+      thead th { padding: 10px; }
+      .percentage { font-size: 15px; }
+      .footnotes { padding: 10px 20px; }
+      .footnotes p { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">LLM EVALUATION</p>
+        <h1><span>元コード・LLMの判断と</span><span>修正状況</span></h1>
+        <p class="description">判定条件ごとの修正の有無を、年度別の割合で整理。</p>
+      </div>
+      <button type="button" class="print-button" id="print-table">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6zM18 12h.01"/></svg>
+        印刷 / PDF保存
+      </button>
+    </header>
+
+    <section class="report" aria-labelledby="table-title">
+      <div class="table-topline">
+        <span class="table-label" id="table-title">年度別・8分類の集計</span>
+        <span class="table-unit">割合（%）</span>
+      </div>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="年度別の集計表。横幅が足りない場合は横にスクロールできます。">
+        <table aria-describedby="percentage-note">
+          <caption class="sr-only">元コードの正誤、LLMの判断、修正の有無による8分類の年度別の割合</caption>
+          <colgroup>
+            <col class="classification"><col class="original"><col class="judgment"><col class="revision">
+            <col class="year"><col class="year"><col class="year"><col class="year">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" id="h-class">分類</th>
+              <th scope="col" id="h-original">元コード</th>
+              <th scope="col" id="h-llm">LLMの判断</th>
+              <th scope="col" id="h-edit">修正</th>
+              <th scope="col" id="h-2024" class="year-heading">2024</th>
+              <th scope="col" id="h-2025" class="year-heading">2025</th>
+              <th scope="col" id="h-2026" class="year-heading">2026</th>
+              <th scope="col" id="h-total" class="year-heading total-column">全年度</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="revised">
+              <th scope="row" id="r1" class="row-number">①</th>
+              <th rowspan="2" scope="rowgroup" id="o1" class="condition"><span class="status correct">正解</span></th>
+              <th rowspan="2" scope="rowgroup" id="j1" class="condition"><span class="status correct">正解</span></th>
+              <th scope="row" id="e1"><span class="revision-label">あり</span></th>
+              <td class="number-cell" headers="r1 h-2024 o1 j1 h-edit e1"><span class="percentage">2.5%</span></td>
+              <td class="number-cell" headers="r1 h-2025 o1 j1 h-edit e1"><span class="percentage">1.2%</span></td>
+              <td class="number-cell" headers="r1 h-2026 o1 j1 h-edit e1"><span class="percentage">1.1%</span></td>
+              <td class="number-cell total-column" headers="r1 h-total o1 j1 h-edit e1"><span class="percentage">1.6%</span></td>
+            </tr>
+            <tr class="unchanged">
+              <th scope="row" id="r2" class="row-number">②</th>
+              <th scope="row" id="e2"><span class="revision-label">なし</span></th>
+              <td class="number-cell" headers="r2 h-2024 o1 j1 h-edit e2"><span class="percentage">97.5%</span></td>
+              <td class="number-cell" headers="r2 h-2025 o1 j1 h-edit e2"><span class="percentage">98.8%</span></td>
+              <td class="number-cell" headers="r2 h-2026 o1 j1 h-edit e2"><span class="percentage">98.9%</span></td>
+              <td class="number-cell total-column" headers="r2 h-total o1 j1 h-edit e2"><span class="percentage">98.4%</span></td>
+            </tr>
+          </tbody>
+          <tbody>
+            <tr class="revised">
+              <th scope="row" id="r3" class="row-number">③</th>
+              <th rowspan="2" scope="rowgroup" id="o2" class="condition"><span class="status correct">正解</span></th>
+              <th rowspan="2" scope="rowgroup" id="j2" class="condition"><span class="status incorrect">不正解</span></th>
+              <th scope="row" id="e3"><span class="revision-label">あり</span></th>
+              <td class="number-cell" headers="r3 h-2024 o2 j2 h-edit e3"><span class="percentage">32.7%</span></td>
+              <td class="number-cell" headers="r3 h-2025 o2 j2 h-edit e3"><span class="percentage">31.6%</span></td>
+              <td class="number-cell" headers="r3 h-2026 o2 j2 h-edit e3"><span class="percentage">43.2%</span></td>
+              <td class="number-cell total-column" headers="r3 h-total o2 j2 h-edit e3"><span class="percentage">35.4%</span></td>
+            </tr>
+            <tr class="unchanged">
+              <th scope="row" id="r4" class="row-number">④</th>
+              <th scope="row" id="e4"><span class="revision-label">なし</span></th>
+              <td class="number-cell" headers="r4 h-2024 o2 j2 h-edit e4"><span class="percentage">67.3%</span></td>
+              <td class="number-cell" headers="r4 h-2025 o2 j2 h-edit e4"><span class="percentage">68.4%</span></td>
+              <td class="number-cell" headers="r4 h-2026 o2 j2 h-edit e4"><span class="percentage">56.8%</span></td>
+              <td class="number-cell total-column" headers="r4 h-total o2 j2 h-edit e4"><span class="percentage">64.6%</span></td>
+            </tr>
+          </tbody>
+          <tbody>
+            <tr class="revised">
+              <th scope="row" id="r5" class="row-number">⑤</th>
+              <th rowspan="2" scope="rowgroup" id="o3" class="condition"><span class="status incorrect">不正解</span></th>
+              <th rowspan="2" scope="rowgroup" id="j3" class="condition"><span class="status incorrect">不正解</span></th>
+              <th scope="row" id="e5"><span class="revision-label">あり</span></th>
+              <td class="number-cell" headers="r5 h-2024 o3 j3 h-edit e5"><span class="percentage">69.0%</span></td>
+              <td class="number-cell" headers="r5 h-2025 o3 j3 h-edit e5"><span class="percentage">75.0%</span></td>
+              <td class="number-cell" headers="r5 h-2026 o3 j3 h-edit e5"><span class="percentage">88.8%</span></td>
+              <td class="number-cell total-column" headers="r5 h-total o3 j3 h-edit e5"><span class="percentage">78.9%</span></td>
+            </tr>
+            <tr class="unchanged">
+              <th scope="row" id="r6" class="row-number">⑥</th>
+              <th scope="row" id="e6"><span class="revision-label">なし</span></th>
+              <td class="number-cell" headers="r6 h-2024 o3 j3 h-edit e6"><span class="percentage">31.0%</span></td>
+              <td class="number-cell" headers="r6 h-2025 o3 j3 h-edit e6"><span class="percentage">25.0%</span></td>
+              <td class="number-cell" headers="r6 h-2026 o3 j3 h-edit e6"><span class="percentage">11.2%</span></td>
+              <td class="number-cell total-column" headers="r6 h-total o3 j3 h-edit e6"><span class="percentage">21.1%</span></td>
+            </tr>
+          </tbody>
+          <tbody>
+            <tr class="revised">
+              <th scope="row" id="r7" class="row-number">⑦</th>
+              <th rowspan="2" scope="rowgroup" id="o4" class="condition"><span class="status incorrect">不正解</span></th>
+              <th rowspan="2" scope="rowgroup" id="j4" class="condition"><span class="status correct">正解</span></th>
+              <th scope="row" id="e7"><span class="revision-label">あり</span></th>
+              <td class="number-cell" headers="r7 h-2024 o4 j4 h-edit e7"><span class="percentage">4.2%</span></td>
+              <td class="number-cell" headers="r7 h-2025 o4 j4 h-edit e7"><span class="percentage">0.0%</span></td>
+              <td class="number-cell" headers="r7 h-2026 o4 j4 h-edit e7"><span class="percentage">0.0%</span></td>
+              <td class="number-cell total-column" headers="r7 h-total o4 j4 h-edit e7"><span class="percentage">2.1%</span></td>
+            </tr>
+            <tr class="unchanged">
+              <th scope="row" id="r8" class="row-number">⑧</th>
+              <th scope="row" id="e8"><span class="revision-label">なし</span></th>
+              <td class="number-cell" headers="r8 h-2024 o4 j4 h-edit e8"><span class="percentage">95.8%</span></td>
+              <td class="number-cell" headers="r8 h-2025 o4 j4 h-edit e8"><span class="percentage">100.0%</span></td>
+              <td class="number-cell" headers="r8 h-2026 o4 j4 h-edit e8"><span class="percentage">100.0%</span></td>
+              <td class="number-cell total-column" headers="r8 h-total o4 j4 h-edit e8"><span class="percentage">97.9%</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footnotes">
+        <p id="percentage-note"><span class="note-mark">※</span>割合は、各年度・全年度の同じ「元コード × LLMの判断」の組み合わせ内で算出（①＋②、③＋④、⑤＋⑥、⑦＋⑧がそれぞれ100%）。</p>
+      </div>
+    </section>
+    <p class="mobile-hint">↔ 表は左右にスクロールできます。</p>
+    <footer class="page-footer"><span>元コード × LLMの判断 × 修正の有無</span><span>2024 — 2026</span></footer>
+  </main>
+  <script>
+    document.getElementById('print-table').addEventListener('click', function () { window.print(); });
+  </script>
+</body>
+</html>
